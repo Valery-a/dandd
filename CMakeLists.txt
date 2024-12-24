@@ -4,4 +4,4 @@ project(MyProject)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
-add_executable(a src/main.cpp)
+add_executable(run src/main.cpp)
