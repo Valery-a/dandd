@@ -38,6 +38,17 @@ void loadLevel(const char* username) {
         cout << "progress not found" << username << endl;
     }
 }
+void checkProgress(int level, int coins) {
+    char message[100];
+    if (level >= 5 && coins >= 500) {
+        strcpy(message, "bonus");
+    } else if (level >= 3) {
+        strcpy(message, "closer");
+    } else {
+        strcpy(message, "far");
+    }
+    cout << message << endl;
+}
 
 int main() {
     char username[50] = "player1";
@@ -47,4 +58,15 @@ int main() {
 
     saveLevel(username, level, coins, lives);
     loadLevel(username);
+    checkProgress(level, coins);
+
+    level = 5;
+    coins = 600;
+    cout << "\n updating the progress \n" << endl;
+
+    saveLevel(username, level, coins, lives);
+    loadLevel(username);
+    checkProgress(level, coins);
+
+    return 0;
 }
