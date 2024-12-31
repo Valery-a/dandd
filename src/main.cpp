@@ -57,7 +57,16 @@ void resetProgress(const char* username) {
 void exitGame(const char* username, int level, int coins, int lives) {
     cout << "The tarnished one rests, for now. Your journey has been recorded." << endl;
     saveLevel(username, level, coins, lives);
-    cout << "Goodbye, " << username << "!" << endl;
+    cout << "Fare thee well, " << username << ". May the grace of the Erdtree guide thee henceforth." << endl;
+}
+
+void menu() {
+    cout << "\nThe Tarnished Path:\n";
+    cout << "1. Continue your pilgrimage\n";
+    cout << "2. Begin a new quest\n";
+    cout << "3. Erase your legacy\n";
+    cout << "4. Abandon the lands\n";
+    cout << "What is thy will, Tarnished? ";
 }
 
 int main() {
@@ -68,14 +77,42 @@ int main() {
     cout << "Speak thy name, Tarnished one: ";
     cin >> username;
 
-    level = 5;
-    coins = 600;
+    if (loadLevel(username, level, coins, lives)) {
+        cout << "Welcome back, " << username << ". Thou standest at Level " << level << ", with " << coins << " runes and " << lives << " vestiges of life remaining." << endl;
+    } else {
+        cout << "A new journey begins. Bear the burden of grace, " << username << "." << endl;
+    }
 
     while (true) {
         menu();
         cin >> choice;
 
-    exitGame(username, level, coins, lives);
+        if (choice == 1) {
+            cout << "The lands between beckon, " << username << ". Press forward." << endl;
+        } else if (choice == 2) {
+            level = 1;
+            coins = 0;
+            lives = 3;
+            cout << "Your past is ash, and your future lies in shadow. Begin again." << endl;
+        } else if (choice == 3) {
+            resetProgress(username);
+            level = 1;
+            coins = 0;
+            lives = 3;
+        } else if (choice == 4) {
+            exitGame(username, level, coins, lives);
+            break;
+        } else {
+            cout << "An unwise choice, Tarnished. Choose again." << endl;
+        }
+
+        level++;
+        coins += 100;
+        if (lives > 0) lives--;
+
+        cout << "Thy current plight: Level " << level << ", Runes " << coins << ", Vestiges of Life " << lives << "." << endl;
+        saveLevel(username, level, coins, lives);
+    }
 
     return 0;
 }
