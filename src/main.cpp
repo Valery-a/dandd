@@ -13,6 +13,10 @@ struct PlayerProfile {
     int playerY;
 };
 
+void clearScreen() {
+    std::cout << "\033[2J\033[1;1H";
+}
+
 void savePlayerProfile(const PlayerProfile &profile) {
     char filename[128];
     sprintf(filename, "%s.txt", profile.username);
@@ -62,6 +66,62 @@ void resetProgress(const char* username) {
         cout << "A curse lingers, preventing the erasure of your deeds." << endl;
     }
 }
+
+bool mainMenu(PlayerProfile &prof) {
+    while(true) {
+        clearScreen();
+        std::cout << "=== МЕНЮ ===" << std::endl;
+        std::cout << "[1] Вход със съществуващ профил" << std::endl;
+        std::cout << "[2] Нов профил" << std::endl;
+        std::cout << "[3] Изход" << std::endl;
+        std::cout << "Избор: ";
+
+        int c;
+        if(!(std::cin >> c)) {
+            // Ако е въведено нещо невалидно, изчистваме грешката
+            std::cin.clear();
+            std::cin.ignore(1000, '\n');
+            continue;
+        }
+        // Изчистваме остатъка на реда
+        std::cin.ignore(1000, '\n');
+
+        if(c == 1) {
+            std::cout << "Потребителско име: ";
+            prof.username[0] = '\0'; // нулираме буфера за сигурност
+            std::cin >> prof.username;
+
+            if(loadPlayerProfile(prof.username, prof)) {
+                std::cout << "Зареден профил за " << prof.username << std::endl;
+                return true;
+            } else {
+                std::cout << "Не е намерен профил с това име!" << std::endl;
+            }
+        }
+        else if(c == 2) {
+            std::cout << "Име за новия профил: ";
+            prof.username[0] = '\0';
+            std::cin >> prof.username;
+
+            prof.mapChoice = -1;
+            prof.lives = 3;
+            prof.totalCoins = 0;
+            prof.playerX = -1;
+            prof.playerY = -1;
+
+            savePlayerProfile(prof);
+            std::cout << "Създаден профил за " << prof.username << std::endl;
+            return true;
+        }
+        else if(c == 3) {
+            return false;
+        }
+        else {
+            std::cout << "Невалиден избор!" << std::endl;
+        }
+    }
+}
+
 
 void exitGame(const char* username, int level, int coins, int lives) {
     cout << "The tarnished one rests, for now. Your journey has been recorded." << endl;
