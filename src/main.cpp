@@ -1,25 +1,146 @@
 #include <iostream>
 #include <fstream>
-#include <cstring>
 
 using namespace std;
 
+const int MAX_LEVELS = 3;
+const int MAP_HEIGHT = 10;
+const int MAP_WIDTH  = 15;
+
 struct PlayerProfile {
-    char username[64];
+    char username[50];
+    int level;
     int mapChoice;
     int lives;
     int totalCoins;
+    bool hasKey;
     int playerX;
     int playerY;
 };
 
+struct PairInt {
+    int rows;
+    int columns;
+};
+
+struct MapData {
+    char map[MAP_HEIGHT][MAP_WIDTH];
+    PairInt portals[10];
+    int portalCount;
+};
+
+MapData currentMap;
+
+char level1_map1[MAP_HEIGHT][MAP_WIDTH+1] = {
+    "###############",
+    "#@    C % C % #",
+    "###  ## #  C  #",
+    "##   #  ##  ###",
+    "#   %   ### ###",
+    "# CC  C  C  C #",
+    "#  C CCC # # C#",
+    "# CC C   # & C#",
+    "#  C C  #  # C#",
+    "####%##X %#####"
+};
+
+char level1_map2[MAP_HEIGHT][MAP_WIDTH+1] = {
+    "###############",
+    "#@C  & %  C X #",
+    "#  #########  #",
+    "#  C    %  C  #",
+    "#######  ######",
+    "#  %  ##  ##  #",
+    "#   C   C    C#",
+    "#  ######  ####",
+    "#    C  C  C  #",
+    "###############"
+};
+
+char level2_map1[MAP_HEIGHT][MAP_WIDTH+1] = {
+    "###############",
+    "#@  #  C  %  &#",
+    "# # ### ### # #",
+    "#  C  #  X  % #",
+    "# ###  ###  # #",
+    "#  #  C  #  # #",
+    "#   #%  #   # #",
+    "#  ######  #  #",
+    "#      C   #  #",
+    "###############"
+};
+
+char level2_map2[MAP_HEIGHT][MAP_WIDTH+1] = {
+    "###############",
+    "#@C  C  %  #  #",
+    "## # ## ## ## #",
+    "#  %  C  #  X #",
+    "#   ###### ## #",
+    "# &  # C   #  #",
+    "#   # % # ##  #",
+    "#   #  ##     #",
+    "#      C   ####",
+    "###############"
+};
+
+char level3_map1[MAP_HEIGHT][MAP_WIDTH+1] = {
+    "###############",
+    "#@  C &  #  % #",
+    "## # #### # # #",
+    "#  %  # C  # X#",
+    "# ###  ## # # #",
+    "#   #   # % # #",
+    "#  C# #  #  # #",
+    "#   ###  #### #",
+    "#  C C  %   C #",
+    "###############"
+};
+
+char level3_map2[MAP_HEIGHT][MAP_WIDTH+1] = {
+    "###############",
+    "#@C # &   X % #",
+    "# # # ## %% # #",
+    "#  C  #   C # #",
+    "## ##### # #  #",
+    "#   #  #   #  #",
+    "#   #   # ##  #",
+    "#   ####   #  #",
+    "#     C     C #",
+    "###############"
+};
+
+char (*allMaps[MAX_LEVELS][2])[MAP_WIDTH+1] = {
+    { level1_map1, level1_map2 },
+    { level2_map1, level2_map2 },
+    { level3_map1, level3_map2 }
+};
+
 void clearScreen() {
-    std::cout << "\033[2J\033[1;1H";
+    cout << "\033[2J\033[1;1H";
+}
+
+bool loadPlayerProfile(const char* uname, PlayerProfile &profile) {
+    char filename[50];
+    snprintf(filename, sizeof(filename), "%s.txt", uname);
+    ifstream fin(filename);
+    if(!fin.is_open()) {
+        return false;
+    }
+    fin >> profile.username
+        >> profile.level
+        >> profile.mapChoice
+        >> profile.lives
+        >> profile.totalCoins
+        >> profile.hasKey
+        >> profile.playerX
+        >> profile.playerY;
+    fin.close();
+    return true;
 }
 
 void savePlayerProfile(const PlayerProfile &profile) {
-    char filename[128];
-    sprintf(filename, "%s.txt", profile.username);
+    char filename[50];
+    snprintf(filename, sizeof(filename), "%s.txt", profile.username);
 
     ofstream fout(filename);
     if(!fout.is_open()) {
@@ -27,161 +148,182 @@ void savePlayerProfile(const PlayerProfile &profile) {
     }
 
     fout << profile.username << endl
+        << profile.level << endl
         << profile.mapChoice << endl
         << profile.lives << endl
         << profile.totalCoins << endl
+        << profile.hasKey << endl
         << profile.playerX << endl
         << profile.playerY << endl;
     fout.close();
 }
 
-bool loadPlayerProfile(const char* uname, PlayerProfile &profile) {
-    char filename[128];
-    sprintf(filename, "%s.txt", uname);
+void loadMapForLevel(PlayerProfile &prof) {
+    int levelIndex = prof.level - 1;
+    if(levelIndex < 0) levelIndex = 0;
+    if(levelIndex >= MAX_LEVELS) levelIndex = MAX_LEVELS - 1;
 
-    ifstream fin(filename);
-    if(!fin.is_open()) {
-        return false;
+    if(prof.mapChoice < 0 || prof.mapChoice >= 2) {
+        prof.mapChoice = rand() % 2;
     }
-    fin >> profile.username
-        >> profile.mapChoice
-        >> profile.lives
-        >> profile.totalCoins
-        >> profile.playerX
-        >> profile.playerY;
-    fin.close();
-    return true;
-}
 
-void resetProgress(const char* username) {
-    char filename[100];
-    strcpy(filename, username);
-    strcat(filename, "_progress.txt");
-
-    ofstream file(filename, ios::trunc);
-    if (file.is_open()) {
-        file.close();
-        cout << "Your legacy has been erased, forgotten by the lands between." << endl;
-    } else {
-        cout << "A curse lingers, preventing the erasure of your deeds." << endl;
-    }
-}
-
-bool mainMenu(PlayerProfile &prof) {
-    while(true) {
-        clearScreen();
-        std::cout << "=== МЕНЮ ===" << std::endl;
-        std::cout << "[1] Вход със съществуващ профил" << std::endl;
-        std::cout << "[2] Нов профил" << std::endl;
-        std::cout << "[3] Изход" << std::endl;
-        std::cout << "Избор: ";
-
-        int c;
-        if(!(std::cin >> c)) {
-            // Ако е въведено нещо невалидно, изчистваме грешката
-            std::cin.clear();
-            std::cin.ignore(1000, '\n');
-            continue;
+    for(int i=0; i<MAP_HEIGHT; i++) {
+        for(int j=0; j<MAP_WIDTH; j++) {
+            currentMap.map[i][j] = allMaps[levelIndex][prof.mapChoice][i][j];
         }
-        // Изчистваме остатъка на реда
-        std::cin.ignore(1000, '\n');
+    }
 
-        if(c == 1) {
-            std::cout << "Потребителско име: ";
-            prof.username[0] = '\0'; // нулираме буфера за сигурност
-            std::cin >> prof.username;
-
-            if(loadPlayerProfile(prof.username, prof)) {
-                std::cout << "Зареден профил за " << prof.username << std::endl;
-                return true;
-            } else {
-                std::cout << "Не е намерен профил с това име!" << std::endl;
+    currentMap.portalCount = 0;
+    for(int i=0; i<MAP_HEIGHT; i++) {
+        for(int j=0; j<MAP_WIDTH; j++) {
+            if(currentMap.map[i][j] == '%') {
+                currentMap.portals[currentMap.portalCount].rows = i;
+                currentMap.portals[currentMap.portalCount].columns = j;
+                currentMap.portalCount++;
             }
         }
-        else if(c == 2) {
-            std::cout << "Име за новия профил: ";
-            prof.username[0] = '\0';
-            std::cin >> prof.username;
+    }
 
-            prof.mapChoice = -1;
-            prof.lives = 3;
-            prof.totalCoins = 0;
-            prof.playerX = -1;
-            prof.playerY = -1;
-
-            savePlayerProfile(prof);
-            std::cout << "Създаден профил за " << prof.username << std::endl;
-            return true;
+    if(prof.playerX < 0 || prof.playerX >= MAP_HEIGHT || prof.playerY < 0 || prof.playerY >= MAP_WIDTH)
+    {
+        for(int i=0; i<MAP_HEIGHT; i++) {
+            for(int j=0; j<MAP_WIDTH; j++) {
+                if(currentMap.map[i][j] == '@') {
+                    prof.playerX = i;
+                    prof.playerY = j;
+                    break;
+                }
+            }
         }
-        else if(c == 3) {
-            return false;
-        }
-        else {
-            std::cout << "Невалиден избор!" << std::endl;
-        }
+    } else {
+        currentMap.map[prof.playerX][prof.playerY] = '@';
     }
 }
 
-
-void exitGame(const char* username, int level, int coins, int lives) {
-    cout << "The tarnished one rests, for now. Your journey has been recorded." << endl;
-    //saveLevel(username, level, coins, lives);
-    cout << "Fare thee well, " << username << ". May the grace of the Erdtree guide thee henceforth." << endl;
+void printMap(const PlayerProfile &prof) {
+    clearScreen();
+    cout << "[Q] изход" << endl;
+    cout << "User playing: " << prof.username << endl;
+    cout << "Level chosen: " << prof.level << " (Map# " << prof.mapChoice << ")" << endl;
+    cout << "Lives: " << prof.lives << endl;
+    cout << "Coins: " << prof.totalCoins << endl;
+    cout << "Key: " << (prof.hasKey ? "✓" : "⨯") << endl;
+    cout << "-------------------------------" << endl;
+    for(int i=0; i<MAP_HEIGHT; i++){
+        for(int j=0; j<MAP_WIDTH; j++){
+            cout << currentMap.map[i][j];
+        }
+        cout << endl;
+    }
+    cout << "-------------------------------" << endl;
 }
 
-void menu() {
-    cout << "\nThe Tarnished Path:\n";
-    cout << "1. Continue your pilgrimage\n";
-    cout << "2. Begin a new quest\n";
-    cout << "3. Erase your legacy\n";
-    cout << "4. Abandon the lands\n";
-    cout << "What is thy will, Tarnished? ";
+void processMove(PlayerProfile &profile, char move) {
+    int playerx = profile.playerX;
+    int playery = profile.playerY;
+    int newx = playerx;
+    int newy = playery;
+
+    switch(move) {
+        case 'W': case 'w': newx--; break;
+        case 'S': case 's': newx++; break;
+        case 'A': case 'a': newy--; break;
+        case 'D': case 'd': newy++; break;
+        default:
+            return;
+    }
+
+    char dest = currentMap.map[newx][newy];
+    if(dest == '#') {
+        profile.lives--;
+        return;
+    }
+
+    currentMap.map[playerx][playery] = ' ';
+
+    switch(dest) {
+        case 'C':
+            profile.totalCoins++;
+            break;
+        case '&':
+            profile.hasKey = true;
+            break;
+        case 'X':
+            if(profile.hasKey) {
+                profile.level++;
+                profile.playerX = -1;
+                profile.playerY = -1;
+                profile.mapChoice = -1;
+            }
+            break;
+        case '%':
+            for(int i=0; i<currentMap.portalCount; i++){
+                if(currentMap.portals[i].rows == newx && currentMap.portals[i].columns == newy) {
+                    int next = (i + 1) % currentMap.portalCount;
+                    newx = currentMap.portals[next].rows;
+                    newy = currentMap.portals[next].columns;
+                    break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+
+    currentMap.map[newx][newy] = '@';
+    profile.playerX = newx;
+    profile.playerY = newy;
 }
 
 int main() {
-    char username[50];
-    int level = 1, coins = 0, lives = 3;
-    int choice;
-
-    cout << "Speak thy name, Tarnished one: ";
-    cin >> username;
-
-    // if (loadLevel(username, level, coins, lives)) {
-    //     cout << "Welcome back, " << username << ". Thou standest at Level " << level << ", with " << coins << " runes and " << lives << " vestiges of life remaining." << endl;
-    // } else {
-    //     cout << "A new journey begins. Bear the burden of grace, " << username << "." << endl;
-    // }
-
-    while (true) {
-        menu();
-        cin >> choice;
-
-        if (choice == 1) {
-            cout << "The lands between beckon, " << username << ". Press forward." << endl;
-        } else if (choice == 2) {
-            level = 1;
-            coins = 0;
-            lives = 3;
-            cout << "Your past is ash, and your future lies in shadow. Begin again." << endl;
-        } else if (choice == 3) {
-            resetProgress(username);
-            level = 1;
-            coins = 0;
-            lives = 3;
-        } else if (choice == 4) {
-            exitGame(username, level, coins, lives);
-            break;
-        } else {
-            cout << "An unwise choice, Tarnished. Choose again." << endl;
-        }
-
-        level++;
-        coins += 100;
-        if (lives > 0) lives--;
-
-        cout << "Thy current plight: Level " << level << ", Runes " << coins << ", Vestiges of Life " << lives << "." << endl;
-        //saveLevel(username, level, coins, lives);
+    PlayerProfile profile;
+    if(!mainMenu(profile)) {
+        return 0;
     }
 
+    bool running = true;
+    loadMapForLevel(profile);
+    int lastLoadedLevel = profile.level;
+
+    while(running) {
+        if(profile.level > MAX_LEVELS) {
+            clearScreen();
+            break;
+        }
+        if(profile.lives <= 0) {
+            clearScreen();
+            break;
+        }
+
+        if(profile.level != lastLoadedLevel && profile.level <= MAX_LEVELS) {
+            loadMapForLevel(profile);
+            lastLoadedLevel = profile.level;
+        }
+        
+        printMap(profile);
+
+        cout << "Ход (W/A/S/D/Q): ";
+        char command;
+        cin >> command;
+        cin.ignore(1000, '\n');
+
+        if(command == 'q' || command == 'Q') {
+            savePlayerProfile(profile);
+            running = false;
+        }
+        else if(command == 'w' || command == 'W' ||
+                command == 'a' || command == 'A' ||
+                command == 's' || command == 'S' ||
+                command == 'd' || command == 'D')
+        {
+            processMove(profile, command);
+        }
+        else {
+            //invalid command
+        }
+    }
+
+    savePlayerProfile(profile);
+    clearScreen();
     return 0;
 }
