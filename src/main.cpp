@@ -29,6 +29,7 @@ struct PlayerProfile {
 };
 
 
+
 struct MapData {
     char map[MAP_HEIGHT][MAP_WIDTH];
     PairInt portals[10];
@@ -75,12 +76,14 @@ bool loadPlayerProfile(const char* uname, PlayerProfile &profile) {
         >> profile.hasKey
         >> profile.playerX
         >> profile.playerY
-        >> profile.collectedCoinCount
-        >> profile.maxUnlockedLevel;
-        
+        >> profile.collectedCoinCount;
 
     for (int i = 0; i < profile.collectedCoinCount; i++) {
         fin >> profile.collectedCoins[i].rows >> profile.collectedCoins[i].columns;
+    }
+
+    if (!(fin >> profile.maxUnlockedLevel)) {
+        profile.maxUnlockedLevel = (profile.level > 0) ? profile.level : 1;
     }
 
     fin.close();
@@ -97,21 +100,32 @@ void savePlayerProfile(const PlayerProfile &profile) {
     }
 
     fout << profile.username << endl
-        << profile.level << endl
-        << profile.mapChoice << endl
-        << profile.lives << endl
-        << profile.totalCoins << endl
-        << profile.hasKey << endl
-        << profile.playerX << endl
-        << profile.playerY << endl
-        << profile.collectedCoinCount << endl
-        << profile.maxUnlockedLevel << endl;
+         << profile.level << endl
+         << profile.mapChoice << endl
+         << profile.lives << endl
+         << profile.totalCoins << endl
+         << profile.hasKey << endl
+         << profile.playerX << endl
+         << profile.playerY << endl
+         << profile.collectedCoinCount << endl;
 
     for (int i = 0; i < profile.collectedCoinCount; i++) {
         fout << profile.collectedCoins[i].rows << " " << profile.collectedCoins[i].columns << endl;
     }
 
+    fout << profile.maxUnlockedLevel << endl;
+
     fout.close();
+}
+
+void myStrCpy(char *dest, const char *src, size_t n) {
+    size_t i = 0;
+    for (; i < n && src[i] != '\0'; i++) {
+        dest[i] = src[i];
+    }
+    for (; i < n; i++) {
+        dest[i] = '\0';
+    }
 }
 
 bool loadMapFromFile(const char *fileName, MapData &mapData) {
@@ -128,7 +142,7 @@ bool loadMapFromFile(const char *fileName, MapData &mapData) {
             cerr << "Error reading map file: " << fileName << endl;
             return false;
         }
-        strncpy(mapData.map[i], line, MAP_WIDTH);
+        myStrCpy(mapData.map[i], line, MAP_WIDTH);
     }
 
     file.close();
@@ -230,7 +244,13 @@ void processMove(PlayerProfile &profile, char move) {
         profile.playerX = -1;
         profile.playerY = -1;
         profile.mapChoice = -1;
+    } else if (dest == 'X' && !profile.hasKey) {
+        cout << "You don't have a key yet, go find it. [ENTER] (ok)";
+        cin.get();
+        return;
     }
+    
+
 
     if (dest == 'C') {
         profile.totalCoins++;
@@ -257,15 +277,6 @@ void processMove(PlayerProfile &profile, char move) {
     switch (dest) {
         case '&':
             profile.hasKey = true;
-            break;
-        case 'X':
-            if (profile.hasKey) {
-                profile.hasKey = false;
-                profile.level++;
-                profile.playerX = -1;
-                profile.playerY = -1;
-                profile.mapChoice = -1;
-            }
             break;
         case '%': {
             for (int i = 0; i < currentMap.portalCount; i++) {
@@ -408,14 +419,15 @@ void selectLevel(PlayerProfile &profile) {
         }
 
         if (levelChoice >= 1 && levelChoice <= MAX_LEVELS) {
-            if (levelChoice > profile.level) {
-                cout << "Level " << levelChoice << " is locked. Complete Level " << levelChoice - 1 << " first. [ENTER]" << endl;
+            if (levelChoice > profile.maxUnlockedLevel) {
+                cout << "Level " << levelChoice << " is locked. "
+                    << "Complete Level " << (levelChoice - 1) << " first. [ENTER]" << endl;
                 cin.ignore(1000, '\n');
                 cin.get();
             } else {
                 profile.level = levelChoice;
                 loadMapForLevel(profile);
-                return;
+                return; 
             }
         } else if (levelChoice == 4) {
             mainMenu(profile);
