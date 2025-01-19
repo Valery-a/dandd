@@ -5,7 +5,7 @@ using namespace std;
 
 const int MAX_LEVELS = 3;
 const int MAP_HEIGHT = 10;
-const int MAP_WIDTH  = 15;
+const int MAP_WIDTH = 15;
 const int MAX_COLLECTED_COINS = 100;
 
 struct PairInt {
@@ -38,29 +38,29 @@ struct MapData {
 
 MapData currentMap;
 
-void selectLevel(PlayerProfile &profile);
+void selectLevel(PlayerProfile& profile);
 
 void clearScreen() {
     cout << "\033[2J\033[1;1H";
 }
 
-bool userExists(const char *username) {
+bool userExists(const char* username) {
     char filename[55];
     snprintf(filename, sizeof(filename), "%s.txt", username);
     ifstream file(filename);
     return file.is_open();
 }
 
-void removeCollectedCoinsFromMap(PlayerProfile &profile) {
+void removeCollectedCoinsFromMap(PlayerProfile& profile) {
     for (int i = 0; i < profile.collectedCoinCount; i++) {
-        PairInt &pos = profile.collectedCoins[i];
+        PairInt& pos = profile.collectedCoins[i];
         if (currentMap.map[pos.rows][pos.columns] == 'C') {
             currentMap.map[pos.rows][pos.columns] = ' ';
         }
     }
 }
 
-bool loadPlayerProfile(const char* uname, PlayerProfile &profile) {
+bool loadPlayerProfile(const char* uname, PlayerProfile& profile) {
     char filename[50];
     snprintf(filename, sizeof(filename), "%s.txt", uname);
     ifstream fin(filename);
@@ -90,7 +90,7 @@ bool loadPlayerProfile(const char* uname, PlayerProfile &profile) {
     return true;
 }
 
-void savePlayerProfile(const PlayerProfile &profile) {
+void savePlayerProfile(const PlayerProfile& profile) {
     char filename[50];
     snprintf(filename, sizeof(filename), "%s.txt", profile.username);
 
@@ -100,14 +100,14 @@ void savePlayerProfile(const PlayerProfile &profile) {
     }
 
     fout << profile.username << endl
-         << profile.level << endl
-         << profile.mapChoice << endl
-         << profile.lives << endl
-         << profile.totalCoins << endl
-         << profile.hasKey << endl
-         << profile.playerX << endl
-         << profile.playerY << endl
-         << profile.collectedCoinCount << endl;
+        << profile.level << endl
+        << profile.mapChoice << endl
+        << profile.lives << endl
+        << profile.totalCoins << endl
+        << profile.hasKey << endl
+        << profile.playerX << endl
+        << profile.playerY << endl
+        << profile.collectedCoinCount << endl;
 
     for (int i = 0; i < profile.collectedCoinCount; i++) {
         fout << profile.collectedCoins[i].rows << " " << profile.collectedCoins[i].columns << endl;
@@ -118,7 +118,7 @@ void savePlayerProfile(const PlayerProfile &profile) {
     fout.close();
 }
 
-void myStrCpy(char *dest, const char *src, size_t n) {
+void myStrCpy(char* dest, const char* src, size_t n) {
     size_t i = 0;
     for (; i < n && src[i] != '\0'; i++) {
         dest[i] = src[i];
@@ -128,7 +128,7 @@ void myStrCpy(char *dest, const char *src, size_t n) {
     }
 }
 
-bool loadMapFromFile(const char *fileName, MapData &mapData) {
+bool loadMapFromFile(const char* fileName, MapData& mapData) {
     ifstream file(fileName);
     if (!file.is_open()) {
         cerr << "Failed to open map file: " << fileName << endl;
@@ -136,7 +136,7 @@ bool loadMapFromFile(const char *fileName, MapData &mapData) {
     }
 
     for (int i = 0; i < MAP_HEIGHT; i++) {
-        char line[MAP_WIDTH + 1] = {0};
+        char line[MAP_WIDTH + 1] = { 0 };
         file.getline(line, sizeof(line));
         if (strlen(line) < MAP_WIDTH) {
             cerr << "Error reading map file: " << fileName << endl;
@@ -163,16 +163,30 @@ bool loadMapFromFile(const char *fileName, MapData &mapData) {
     return true;
 }
 
-void loadMapForLevel(PlayerProfile &profile) {
+void loadMapForLevel(PlayerProfile& profile) {
     int levelIndex = profile.level - 1;
-    if (levelIndex < 0 || levelIndex >= MAX_LEVELS) return;
+    if (levelIndex < 0 || levelIndex >= MAX_LEVELS) {
+        cerr << "Invalid level index: " << levelIndex << endl;
+        return;
+    }
 
     if (profile.mapChoice < 0 || profile.mapChoice >= 2) {
+        srand(static_cast<unsigned>(time(0)));
         profile.mapChoice = rand() % 2;
     }
 
-    char fileName[50];
+    char fileName[100];
     snprintf(fileName, sizeof(fileName), "level%d_map%d.txt", profile.level, profile.mapChoice + 1);
+
+    cout << "Loading map file: " << fileName << endl;
+
+    ifstream fileCheck(fileName);
+    if (!fileCheck.good()) {
+        cerr << "Map file not found: " << fileName << endl;
+        memset(currentMap.map, ' ', sizeof(currentMap.map));
+        return;
+    }
+    fileCheck.close();
 
     if (!loadMapFromFile(fileName, currentMap)) {
         cerr << "Error loading map. Defaulting to blank map." << endl;
@@ -186,7 +200,7 @@ void loadMapForLevel(PlayerProfile &profile) {
     currentMap.map[profile.playerX][profile.playerY] = '@';
 }
 
-void printMap(const PlayerProfile &prof) {
+void printMap(const PlayerProfile& prof) {
     clearScreen();
     cout << "[Q] EXIT" << endl;
     cout << "[P] CHANGE PROFILE" << endl;
@@ -196,8 +210,8 @@ void printMap(const PlayerProfile &prof) {
     cout << "Coins: " << prof.totalCoins << endl;
     cout << "Key: " << (prof.hasKey ? "✓" : "⨯") << endl;
     cout << "-------------------------------" << endl;
-    for(int i = 0; i < MAP_HEIGHT; i++){
-        for(int j = 0; j < MAP_WIDTH; j++){
+    for (int i = 0; i < MAP_HEIGHT; i++) {
+        for (int j = 0; j < MAP_WIDTH; j++) {
             cout << currentMap.map[i][j] << ' ';
         }
         cout << endl;
@@ -205,19 +219,19 @@ void printMap(const PlayerProfile &prof) {
     cout << "-------------------------------" << endl;
 }
 
-void processMove(PlayerProfile &profile, char move) {
+void processMove(PlayerProfile& profile, char move) {
     int playerx = profile.playerX;
     int playery = profile.playerY;
     int newx = playerx;
     int newy = playery;
 
     switch (move) {
-        case 'W': case 'w': newx--; break;
-        case 'S': case 's': newx++; break;
-        case 'A': case 'a': newy--; break;
-        case 'D': case 'd': newy++; break;
-        default:
-            return;
+    case 'W': case 'w': newx--; break;
+    case 'S': case 's': newx++; break;
+    case 'A': case 'a': newy--; break;
+    case 'D': case 'd': newy++; break;
+    default:
+        return;
     }
 
     char dest = currentMap.map[newx][newy];
@@ -244,18 +258,19 @@ void processMove(PlayerProfile &profile, char move) {
         profile.playerX = -1;
         profile.playerY = -1;
         profile.mapChoice = -1;
-    } else if (dest == 'X' && !profile.hasKey) {
+    }
+    else if (dest == 'X' && !profile.hasKey) {
         cout << "You don't have a key yet, go find it. [ENTER] (ok)";
         cin.get();
         return;
     }
-    
+
 
 
     if (dest == 'C') {
         profile.totalCoins++;
         if (profile.collectedCoinCount < MAX_COLLECTED_COINS) {
-            profile.collectedCoins[profile.collectedCoinCount++] = {newx, newy};
+            profile.collectedCoins[profile.collectedCoinCount++] = { newx, newy };
         }
     }
 
@@ -269,27 +284,29 @@ void processMove(PlayerProfile &profile, char move) {
         }
         if (wasOnTeleporter) {
             currentMap.map[playerx][playery] = '%';
-        } else {
+        }
+        else {
             currentMap.map[playerx][playery] = ' ';
         }
     }
 
     switch (dest) {
-        case '&':
-            profile.hasKey = true;
-            break;
-        case '%': {
-            for (int i = 0; i < currentMap.portalCount; i++) {
-                if (currentMap.portals[i].rows == newx && currentMap.portals[i].columns == newy) {
-                    int next = (i + 1) % currentMap.portalCount;
-                    newx = currentMap.portals[next].rows;
-                    newy = currentMap.portals[next].columns;
-                    break;
-                }
+    case '&':
+        profile.hasKey = true;
+        break;
+    case '%': {
+        for (int i = 0; i < currentMap.portalCount; i++) {
+            if (currentMap.portals[i].rows == newx && currentMap.portals[i].columns == newy) {
+                int next = (i + 1) % currentMap.portalCount;
+                newx = currentMap.portals[next].rows;
+                newy = currentMap.portals[next].columns;
+                break;
             }
-            break;}
-        default:
-            break;
+        }
+        break;
+    }
+    default:
+        break;
     }
 
     currentMap.map[newx][newy] = '@';
@@ -297,7 +314,7 @@ void processMove(PlayerProfile &profile, char move) {
     profile.playerY = newy;
 }
 
-void mainMenu(PlayerProfile &profile) {
+void mainMenu(PlayerProfile& profile) {
     int choice;
     while (true) {
         clearScreen();
@@ -317,63 +334,67 @@ void mainMenu(PlayerProfile &profile) {
         }
 
         switch (choice) {
-            case 1: {
-                cout << "Enter username: ";
-                cin >> profile.username;
-                if (loadPlayerProfile(profile.username, profile)) {
-                    cout << "Welcome back, " << profile.username << "!" << endl;
-                    cin.ignore(1000, '\n');
-                    cin.get();
-                    selectLevel(profile);
-                    return;
-                } else {
-                    cout << "Username not found. [ENTER]" << endl;
-                    cin.ignore(1000, '\n');
-                    cin.get();
-                }
-                break;
-            }
-            case 2: {
-                cout << "Enter a new username (50 characters): ";
-                while (true) {
-                    cin >> profile.username;
-                    if (strlen(profile.username) > 50) {
-                        cout << "Username cannot exceed 50 characters.";
-                    } else if (userExists(profile.username)) {
-                        cout << "Username already in use.";
-                    } else {
-                        cout << "Successfuly registered. [ENTER]" << endl;
-                        cin.ignore(1000, '\n');
-                        cin.get();
-                        break;
-                    }
-                }
-                profile.level = 1;
-                profile.mapChoice = -1;
-                profile.lives = 3;
-                profile.totalCoins = 0;
-                profile.collectedCoinCount = 0;
-                profile.hasKey = false;
-                profile.playerX = -1;
-                profile.playerY = -1;
-                savePlayerProfile(profile);
-                cout << "Registration successful! Welcome, " << profile.username << "." << endl;
+        case 1: {
+            cout << "Enter username: ";
+            cin >> profile.username;
+            if (loadPlayerProfile(profile.username, profile)) {
+                cout << "Welcome back, " << profile.username << "!" << endl;
+                cin.ignore(1000, '\n');
+                cin.get();
                 selectLevel(profile);
                 return;
             }
-            case 3:
-                cout << "Exiting the game" << endl;
-                exit(0);
-            default:
-                cout << "Invalid choice. [ENTER]" << endl;
+            else {
+                cout << "Username not found. [ENTER]" << endl;
                 cin.ignore(1000, '\n');
                 cin.get();
-                break;
+            }
+            break;
+        }
+        case 2: {
+            cout << "Enter a new username (50 characters): ";
+            while (true) {
+                cin >> profile.username;
+                if (strlen(profile.username) > 50) {
+                    cout << "Username cannot exceed 50 characters.";
+                }
+                else if (userExists(profile.username)) {
+                    cout << "Username already in use.";
+                }
+                else {
+                    cout << "Successfuly registered. [ENTER]" << endl;
+                    cin.ignore(1000, '\n');
+                    cin.get();
+                    break;
+                }
+            }
+            profile.level = 1;
+            profile.maxUnlockedLevel = 1;
+            profile.mapChoice = -1;
+            profile.lives = 3;
+            profile.totalCoins = 0;
+            profile.collectedCoinCount = 0;
+            profile.hasKey = false;
+            profile.playerX = -1;
+            profile.playerY = -1;
+            savePlayerProfile(profile);
+            cout << "Registration successful! Welcome, " << profile.username << "." << endl;
+            selectLevel(profile);
+            return;
+        }
+        case 3:
+            cout << "Exiting the game" << endl;
+            exit(0);
+        default:
+            cout << "Invalid choice. [ENTER]" << endl;
+            cin.ignore(1000, '\n');
+            cin.get();
+            break;
         }
     }
 }
 
-void changeProfile(PlayerProfile &profile) {
+void changeProfile(PlayerProfile& profile) {
     char newUsername[50];
     cout << "Enter the username of the profile you want to switch to: ";
     cin >> newUsername;
@@ -384,14 +405,15 @@ void changeProfile(PlayerProfile &profile) {
         cin.ignore(1000, '\n');
         cin.get();
         selectLevel(profile);
-    } else {
+    }
+    else {
         cout << "Profile not found. Please ensure the username is correct. [ENTER]" << endl;
         cin.ignore(1000, '\n');
         cin.get();
     }
 }
 
-void selectLevel(PlayerProfile &profile) {
+void selectLevel(PlayerProfile& profile) {
     while (true) {
         clearScreen();
         cout << "=== Select Level ===" << endl;
@@ -406,11 +428,10 @@ void selectLevel(PlayerProfile &profile) {
         cout << "5. Reset progress for the last played level" << endl;
         cout << "Enter your choice: ";
 
-        int levelChoice;
-        cin >> levelChoice;
+        int choice;
+        cin >> choice;
 
-        if (cin.fail())
-        {
+        if (cin.fail()) {
             cin.clear();
             cin.ignore(1000, '\n');
             cout << "Invalid input. Please enter a number. [ENTER]" << endl;
@@ -418,54 +439,75 @@ void selectLevel(PlayerProfile &profile) {
             continue;
         }
 
-        if (levelChoice >= 1 && levelChoice <= MAX_LEVELS) {
-            if (levelChoice > profile.maxUnlockedLevel) {
-                cout << "Level " << levelChoice << " is locked. "
-                    << "Complete Level " << (levelChoice - 1) << " first. [ENTER]" << endl;
+        if (choice >= 1 && choice <= MAX_LEVELS) {
+            if (choice > profile.maxUnlockedLevel) {
+                cout << "Level " << choice << " is locked. "
+                    << "Complete Level " << (choice - 1) << " first. [ENTER]" << endl;
                 cin.ignore(1000, '\n');
                 cin.get();
-            } else {
-                profile.level = levelChoice;
-                loadMapForLevel(profile);
-                return; 
             }
-        } else if (levelChoice == 4) {
+            else {
+                profile.level = choice;
+                loadMapForLevel(profile);
+                return;
+            }
+        }
+        else if (choice == 4) {
             mainMenu(profile);
             return;
-        } else if (levelChoice == 5) {
+        }
+        else if (choice == 5) {
             cout << "Are you sure you want to reset progress for the last played level? (Y/N): ";
             char confirmation;
             cin >> confirmation;
             if (confirmation == 'y' || confirmation == 'Y') {
+                if (profile.level <= 1) {
+                    cout << "You cannot reset Level 1. [ENTER]" << endl;
+                    cin.ignore(1000, '\n');
+                    cin.get();
+                    continue;
+                }
+
                 int coinsToRemove = 0;
                 for (int i = 0; i < profile.collectedCoinCount; i++) {
-                    PairInt &coin = profile.collectedCoins[i];
+                    PairInt& coin = profile.collectedCoins[i];
                     if (currentMap.map[coin.rows][coin.columns] == ' ') {
                         coinsToRemove++;
                     }
                 }
                 profile.totalCoins -= coinsToRemove;
+                if (profile.totalCoins < 0) {
+                    profile.totalCoins = 0;
+                }
+
                 profile.collectedCoinCount = 0;
+
                 profile.mapChoice = -1;
                 profile.playerX = -1;
                 profile.playerY = -1;
                 profile.hasKey = false;
 
-                profile.level--;
-                if (profile.level < 1){
-                    profile.level = 1;
+                if (profile.level == profile.maxUnlockedLevel && profile.maxUnlockedLevel > 1) {
+                    profile.maxUnlockedLevel--;
                 }
 
+                profile.level--;
+                if (profile.level < 1) {
+                    profile.level = 1;
+                }
                 loadMapForLevel(profile);
-                cout << "Progress for the last played level has been reset.[ENTER]" << endl;
+
+                cout << "Progress for the last played level has been reset. [ENTER]" << endl;
                 cin.ignore(1000, '\n');
                 cin.get();
-            } else {
+            }
+            else {
                 cout << "Reset canceled. [ENTER]" << endl;
                 cin.ignore(1000, '\n');
                 cin.get();
             }
-        } else {
+        }
+        else {
             cout << "Invalid choice. Try again. [ENTER]" << endl;
             cin.ignore(1000, '\n');
             cin.get();
@@ -518,15 +560,18 @@ int main() {
             mainMenu(profile);
             loadMapForLevel(profile);
             lastLoadedLevel = profile.level;
-        } else if (command == 'p' || command == 'P') {
+        }
+        else if (command == 'p' || command == 'P') {
             savePlayerProfile(profile);
             changeProfile(profile);
-        } else if (command == 'w' || command == 'W' ||
-                command == 'a' || command == 'A' ||
-                command == 's' || command == 'S' ||
-                command == 'd' || command == 'D') {
+        }
+        else if (command == 'w' || command == 'W' ||
+            command == 'a' || command == 'A' ||
+            command == 's' || command == 'S' ||
+            command == 'd' || command == 'D') {
             processMove(profile, command);
-        } else {
+        }
+        else {
             cout << "Invalid command. [ENTER]" << endl;
             cin.ignore(1000, '\n');
         }
