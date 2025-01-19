@@ -25,6 +25,7 @@ struct PlayerProfile {
     int playerY;
     PairInt collectedCoins[MAX_COLLECTED_COINS];
     int collectedCoinCount;
+    int maxUnlockedLevel;
 };
 
 
@@ -74,7 +75,9 @@ bool loadPlayerProfile(const char* uname, PlayerProfile &profile) {
         >> profile.hasKey
         >> profile.playerX
         >> profile.playerY
-        >> profile.collectedCoinCount;
+        >> profile.collectedCoinCount
+        >> profile.maxUnlockedLevel;
+        
 
     for (int i = 0; i < profile.collectedCoinCount; i++) {
         fin >> profile.collectedCoins[i].rows >> profile.collectedCoins[i].columns;
@@ -101,7 +104,8 @@ void savePlayerProfile(const PlayerProfile &profile) {
         << profile.hasKey << endl
         << profile.playerX << endl
         << profile.playerY << endl
-        << profile.collectedCoinCount << endl;
+        << profile.collectedCoinCount << endl
+        << profile.maxUnlockedLevel << endl;
 
     for (int i = 0; i < profile.collectedCoinCount; i++) {
         fout << profile.collectedCoins[i].rows << " " << profile.collectedCoins[i].columns << endl;
@@ -215,10 +219,17 @@ void processMove(PlayerProfile &profile, char move) {
         return;
     }
 
-    if (dest == 'X' && !profile.hasKey) {
-        cout << "You don't have a key yet, go find it. [ENTER] (ok)";
-        cin.get();
-        return;
+    if (dest == 'X' && profile.hasKey) {
+        profile.hasKey = false;
+        profile.level++;
+
+        if (profile.level > profile.maxUnlockedLevel) {
+            profile.maxUnlockedLevel = profile.level;
+        }
+
+        profile.playerX = -1;
+        profile.playerY = -1;
+        profile.mapChoice = -1;
     }
 
     if (dest == 'C') {
@@ -285,10 +296,11 @@ void mainMenu(PlayerProfile &profile) {
         cout << "3. Exit" << endl;
         cout << "Enter your choice: ";
 
-        if (!(cin >> choice)) {
+        if (cin.fail() || !(cin >> choice))
+        {
             cin.clear();
             cin.ignore(1000, '\n');
-            cout << "Invalid input. [ENTER]" << endl;
+            cout << "Invalid input. Please enter a number. [ENTER]" << endl;
             cin.get();
             continue;
         }
@@ -374,7 +386,7 @@ void selectLevel(PlayerProfile &profile) {
         cout << "=== Select Level ===" << endl;
         for (int i = 1; i <= MAX_LEVELS; i++) {
             cout << i << ". Level " << i;
-            if (i > profile.level) {
+            if (i > profile.maxUnlockedLevel) {
                 cout << " (Locked)";
             }
             cout << endl;
@@ -385,6 +397,15 @@ void selectLevel(PlayerProfile &profile) {
 
         int levelChoice;
         cin >> levelChoice;
+
+        if (cin.fail())
+        {
+            cin.clear();
+            cin.ignore(1000, '\n');
+            cout << "Invalid input. Please enter a number. [ENTER]" << endl;
+            cin.get();
+            continue;
+        }
 
         if (levelChoice >= 1 && levelChoice <= MAX_LEVELS) {
             if (levelChoice > profile.level) {
@@ -450,6 +471,7 @@ int main() {
 
     while (running) {
         if (profile.level > MAX_LEVELS) {
+            savePlayerProfile(profile);
             clearScreen();
             cout << "Congratulations " << profile.username << ", you completed all levels!" << endl;
             cin.ignore(1000, '\n');
