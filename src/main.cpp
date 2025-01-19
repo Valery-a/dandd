@@ -171,6 +171,7 @@ void loadMapForLevel(PlayerProfile &profile) {
 void printMap(const PlayerProfile &prof) {
     clearScreen();
     cout << "[Q] EXIT" << endl;
+    cout << "[P] CHANGE PROFILE" << endl;
     cout << "User playing: " << prof.username << endl;
     cout << "Level chosen: " << prof.level << endl;
     cout << "Lives: " << prof.lives << endl;
@@ -204,6 +205,13 @@ void processMove(PlayerProfile &profile, char move) {
     char dest = currentMap.map[newx][newy];
     if (dest == '#') {
         profile.lives--;
+        if (profile.lives <= 0) {
+            cout << "You ran out of lives! Restarting level..." << endl;
+            cin.ignore(1000, '\n');
+            cin.get();
+            profile.lives = 3;
+            loadMapForLevel(profile);
+        }
         return;
     }
 
@@ -291,6 +299,8 @@ void mainMenu(PlayerProfile &profile) {
                 cin >> profile.username;
                 if (loadPlayerProfile(profile.username, profile)) {
                     cout << "Welcome back, " << profile.username << "!" << endl;
+                    cin.ignore(1000, '\n');
+                    cin.get();
                     selectLevel(profile);
                     return;
                 } else {
@@ -309,6 +319,9 @@ void mainMenu(PlayerProfile &profile) {
                     } else if (userExists(profile.username)) {
                         cout << "Username already in use.";
                     } else {
+                        cout << "Successfuly registered. [ENTER]" << endl;
+                        cin.ignore(1000, '\n');
+                        cin.get();
                         break;
                     }
                 }
@@ -337,6 +350,23 @@ void mainMenu(PlayerProfile &profile) {
     }
 }
 
+void changeProfile(PlayerProfile &profile) {
+    char newUsername[50];
+    cout << "Enter the username of the profile you want to switch to: ";
+    cin >> newUsername;
+
+    if (loadPlayerProfile(newUsername, profile)) {
+        cout << "Switched to profile: " << newUsername << endl;
+        savePlayerProfile(profile);
+        cin.ignore(1000, '\n');
+        cin.get();
+        selectLevel(profile);
+    } else {
+        cout << "Profile not found. Please ensure the username is correct. [ENTER]" << endl;
+        cin.ignore(1000, '\n');
+        cin.get();
+    }
+}
 
 void selectLevel(PlayerProfile &profile) {
     while (true) {
@@ -350,7 +380,9 @@ void selectLevel(PlayerProfile &profile) {
             cout << endl;
         }
         cout << "4. Back to main menu" << endl;
+        cout << "5. Reset progress for the last played level" << endl;
         cout << "Enter your choice: ";
+
         int levelChoice;
         cin >> levelChoice;
 
@@ -367,15 +399,50 @@ void selectLevel(PlayerProfile &profile) {
         } else if (levelChoice == 4) {
             mainMenu(profile);
             return;
+        } else if (levelChoice == 5) {
+            cout << "Are you sure you want to reset progress for the last played level? (Y/N): ";
+            char confirmation;
+            cin >> confirmation;
+            if (confirmation == 'y' || confirmation == 'Y') {
+                int coinsToRemove = 0;
+                for (int i = 0; i < profile.collectedCoinCount; i++) {
+                    PairInt &coin = profile.collectedCoins[i];
+                    if (currentMap.map[coin.rows][coin.columns] == ' ') {
+                        coinsToRemove++;
+                    }
+                }
+                profile.totalCoins -= coinsToRemove;
+                profile.collectedCoinCount = 0;
+                profile.mapChoice = -1;
+                profile.playerX = -1;
+                profile.playerY = -1;
+                profile.hasKey = false;
+
+                profile.level--;
+                if (profile.level < 1){
+                    profile.level = 1;
+                }
+
+                loadMapForLevel(profile);
+                cout << "Progress for the last played level has been reset.[ENTER]" << endl;
+                cin.ignore(1000, '\n');
+                cin.get();
+            } else {
+                cout << "Reset canceled. [ENTER]" << endl;
+                cin.ignore(1000, '\n');
+                cin.get();
+            }
         } else {
             cout << "Invalid choice. Try again. [ENTER]" << endl;
+            cin.ignore(1000, '\n');
+            cin.get();
         }
     }
 }
 
 int main() {
     PlayerProfile profile;
-
+    srand(time(0));
     mainMenu(profile);
     bool running = true;
     loadMapForLevel(profile);
@@ -384,16 +451,18 @@ int main() {
     while (running) {
         if (profile.level > MAX_LEVELS) {
             clearScreen();
-            cout << "Congratulations! You completed all levels!" << endl;
+            cout << "Congratulations " << profile.username << ", you completed all levels!" << endl;
             cin.ignore(1000, '\n');
-            break;
+            mainMenu(profile);
         }
 
         if (profile.lives <= 0) {
             clearScreen();
-            cout << "Game Over! You ran out of lives." << endl;
+            cout << "Game Over! You ran out of lives. Restarting the level..." << endl;
             cin.ignore(1000, '\n');
-            break;
+            profile.lives = 3;
+            loadMapForLevel(profile);
+            continue;
         }
 
         if (profile.level != lastLoadedLevel && profile.level <= MAX_LEVELS) {
@@ -404,17 +473,20 @@ int main() {
         printMap(profile);
 
         char command;
-        cout << "(W/A/S/D to move, Q to quit): ";
+        cout << "(W/A/S/D to move, Q to quit, P to change profile): ";
         cin >> command;
         cin.ignore(1000, '\n');
 
         if (command == 'q' || command == 'Q') {
             savePlayerProfile(profile);
-            cout << "Game saved. Returning to the main menu... [ENTER]" << endl;
+            cout << "Level saved. Returning to the main menu... [ENTER]" << endl;
             cin.ignore(1000, '\n');
             mainMenu(profile);
             loadMapForLevel(profile);
             lastLoadedLevel = profile.level;
+        } else if (command == 'p' || command == 'P') {
+            savePlayerProfile(profile);
+            changeProfile(profile);
         } else if (command == 'w' || command == 'W' ||
                 command == 'a' || command == 'A' ||
                 command == 's' || command == 'S' ||
